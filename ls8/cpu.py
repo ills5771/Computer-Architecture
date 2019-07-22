@@ -1,5 +1,3 @@
-"""CPU functionality."""
-
 import sys
 
 class CPU:
@@ -7,7 +5,18 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = [None] * 256
+        self.reg = [0] * 8
+        self.pc = 0
+        
+    def __str__(self):
+        return f"RAM: {self.ram}, REGISTER: {self.reg}, PC: {self.pc}"
+    
+    def ram_read(self, address):
+        return self.ram[address]
+    
+    def ram_write(self, value, address):
+        self.ram[address] = value
 
     def load(self):
         """Load a program into memory."""
@@ -63,3 +72,8 @@ class CPU:
     def run(self):
         """Run the CPU."""
         pass
+    
+cpu = CPU()
+print(cpu.ram, cpu.reg)
+cpu.ram_write(200, 5)
+print(cpu.ram, cpu.reg)
