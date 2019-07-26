@@ -10,6 +10,10 @@ PUSH = 0b01000101
 POP = 0b01000110
 CALL = 0b01010000
 RET = 0b00010001
+CMP = 0b10100111
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
 
 class CPU:
     """Main CPU class."""
@@ -19,6 +23,7 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
         self.SP = 7
+        self.FL = 0b00000000
         self.branch_table = {}
         self.branch_table[LDI] = self.handle_LDI
         self.branch_table[PRN] = self.handle_PRN
@@ -161,9 +166,32 @@ class CPU:
                 return_addr = self.ram[self.reg[self.SP]]
                 self.reg[self.SP] += 1
 
-                self.pc =return_addr
+                self.pc = return_addr
 
-                
+            elif command == CMP:
+                if self.reg[operand_a] == self.reg[operand_b]:
+                    num_of_ops = in((IR >> 6) & 0b01) + 1
+                    e_fl = 0b01000000
+                    current_fl = self.FL
+                    if (current_fl & 0b00000001 == 0b00000000):
+                        self.FL = (e_fl >> 6) & 0b0100011
+
+            elif command == JMP:
+                print("JMP")
+                self.pc = self.reg[operand_a]
+
+            elif command == JEQ:
+                print("JEQ")
+                if self.FL == 0b001:
+                    self.pc = self.reg[operand_a]
+            elif command == JNE:
+                print("JNE")
+                print(command)
+                if self.FL != 0b001:
+                    self.pc = self.reg[operand_a]
+                print(command)
+
+
             else: 
                 print(f"unknown instruction: {command}")
                 sys.exit(1)
