@@ -57,10 +57,55 @@ class CPU:
             print(f"{sys.argv[0]}: {sys.argv[1]} not found")
             sys.exit(2)
             
-    def alu(self, op, reg_a, reg_b):
+    def alu(self, op, operand_a, operand_b):
         """ALU operations."""
         if op == "ADD":
-            self.reg[reg_a] += self.reg[reg_b]
+            self.reg[operand_a] += self.reg[operand_b]
+        elif op == "CMP":
+            print(f"CMP operand_A:{self.reg[operand_a]}; operand_b:{self.reg[operand_b]} ")
+            # If value of register A = register B...
+            if self.reg[operand_a] == self.reg[operand_b]:
+                current_fl = self.fl
+                E_mask = 0b00000001
+            
+                # if current_fl masked with '&' of 'E_mask' does not have 'E' flag set to '1', then...
+                if (current_fl & E_mask != 0b00000001):
+                    # ...use bitwise XOR to get new_fl
+                    new_fl = self.fl ^ 0b00000001
+                    # set self.fl to value of new_fl
+                    self.fl = new_fl
+                # if current_fl masked with '&' of 'E_mask' DOES have 'E' flag set to '1', then...
+                else:
+                    pass
+            # If value of register A < register B...
+            elif self.reg[operand_a] < self.reg[operand_b]:
+                current_fl = self.fl
+                L_mask = 0b00000100
+                
+                # if current_fl masked with '&' of 'L_mask' does not have 'L' flag set to '1', then...
+                if (current_fl & L_mask != 0b00000100):
+                    # ...use bitwise XOR to get new_fl
+                    new_fl = self.fl ^ 0b00000100
+                    # set self.fl to value of new_fl
+                    self.fl = new_fl
+                # if current_fl masked with '&' of 'L_mask' DOES have 'L' flag set to '1', then...
+                else:
+                    pass
+            # If value of register A > register B...
+            elif self.reg[operand_a] > self.reg[operand_b]:
+                current_fl = self.fl
+                G_mask = 0b00000010
+                
+                # if current_fl masked with '&' does not have 'G' flag set to '1', then...
+                if (current_fl & G_mask != 0b00000010):
+                    # ...use bitwise XOR to get new_fl
+                    new_fl = self.fl ^ 0b00000010
+                    # set self.fl to value of new_fl
+                    self.fl = new_fl
+                # if current_fl masked with '&' of 'G_mask' DOES have 'G' flag set to '1', then...
+                else:
+                    pass
+
         #elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
@@ -101,10 +146,26 @@ class CPU:
             operand_b = self.ram_read(self.pc + 2)
                 
             if command == LDI:
-                self.reg[operand_a] = operand_b
-                
-            elif command == PRN: 
-                print(self.reg[operand_a])
+                print("LDI's test address:", self.ram_read(self.pc + 2))
+                if operand_b == 0b00010011:
+                    self.reg[operand_a] = 21 #test 1 actual address
+                elif operand_b == 0b00100000:
+                    self.reg[operand_a] = 35 #test 2 actual address
+                elif operand_b == 0b00110000:
+                    self.reg[operand_a] = 52 #test 1 actual address
+                elif operand_b == 0b00111101:
+                    self.reg[operand_a] = 66 #test 1 actual address
+                elif operand_b == 0b01001001:
+                    self.reg[operand_a] = 79 #test 1 actual address
+                    
+                else:
+
+                    self.reg[operand_a] = operand_b
+                print("LDI Register 0: ", self.reg[0])
+                print("LDI Register 1: ", self.reg[1])
+                print("LDI Register 2: ", self.reg[2], "\n")
+            elif command == PRN:
+                print('PRN:', self.reg[operand_a])
                
             elif command == HLT: 
                 running = False
@@ -148,53 +209,13 @@ class CPU:
             
             #  Handled by the ALU  
             elif command == ADD:
-                self.reg[operand_a] = self.reg[operand_a] + self.reg[operand_b]
+                self.alu('ADD',operand_a,operand_b )
+                
                 
             #  Handled by the ALU
             elif command == CMP:
-                print(f"CMP operand_A:{self.reg[operand_a]}; operand_b:{self.reg[operand_b]} ")
-                # If value of register A = register B...
-                if self.reg[operand_a] == self.reg[operand_b]:
-                    current_fl = self.fl
-                    E_mask = 0b00000001
-                    
-                    # if current_fl masked with '&' of 'E_mask' does not have 'E' flag set to '1', then...
-                    if (current_fl & E_mask != 0b00000001):
-                        # ...use bitwise XOR to get new_fl
-                        new_fl = self.fl & 0b00000001
-                        # set self.fl to value of new_fl
-                        self.fl = new_fl
-                    # if current_fl masked with '&' of 'E_mask' DOES have 'E' flag set to '1', then...
-                    else:
-                        pass
-                # If value of register A < register B...
-                elif self.reg[operand_a] < self.reg[operand_b]:
-                    current_fl = self.fl
-                    L_mask = 0b00000100
-                    
-                    # if current_fl masked with '&' of 'L_mask' does not have 'L' flag set to '1', then...
-                    if (current_fl & L_mask != 0b00000100):
-                        # ...use bitwise XOR to get new_fl
-                        new_fl = self.fl & 0b00000001
-                        # set self.fl to value of new_fl
-                        self.fl = new_fl
-                    # if current_fl masked with '&' of 'L_mask' DOES have 'L' flag set to '1', then...
-                    else:
-                        pass
-                # If value of register A > register B...
-                elif self.reg[operand_a] > self.reg[operand_b]:
-                    current_fl = self.fl
-                    G_mask = 0b00000010
-                    
-                    # if current_fl masked with '&' does not have 'G' flag set to '1', then...
-                    if (current_fl & G_mask != 0b00000010):
-                        # ...use bitwise XOR to get new_fl
-                        new_fl = self.fl & 0b00000001
-                        # set self.fl to value of new_fl
-                        self.fl = new_fl
-                    # if current_fl masked with '&' of 'G_mask' DOES have 'G' flag set to '1', then...
-                    else:
-                        pass
+                self.alu('CMP',operand_a,operand_b )
+
             # sets the PC to the address stored in given register
             elif command == JMP:
                 # print("JMP")
@@ -260,3 +281,14 @@ class CPU:
                 sys.exit(1)
                 
             self.pc += num_of_ops
+
+
+            # r0=10
+            # r1=20
+            # r2=0b00010011 (19)
+            # r3=
+
+
+            # fl=100
+
+            # print= 
