@@ -1,20 +1,21 @@
-# Place where instructions are processed
+ # Place where instructions are processed
 """CPU functionality."""
 import sys
 
-LDI = 0b10000010
-PRN = 0b01000111
-HLT = 0b00000001
-MUL = 0b10100010    #  Handled by the ALU
-PUSH = 0b01000101
-POP = 0b01000110
-CALL = 0b01010000
-RET = 0b00010001
-ADD = 0b10100000    #  Handled by the ALU
-CMP = 0b10100111    #  Handled by the ALU
-JMP = 0b01010100    #  Sets the PC
-JEQ = 0b01010101
-JNE = 0b01010110
+LDI     = 0b10000010
+PRN     = 0b01000111
+HLT     = 0b00000001
+MUL     = 0b10100010    #  Handled by the ALU
+PUSH    = 0b01000101
+POP     = 0b01000110
+CALL    = 0b01010000
+RET     = 0b00010001
+ADD     = 0b10100000    #  Handled by the ALU
+CMP     = 0b10100111    #  Handled by the ALU
+JMP     = 0b01010100    #  Sets the PC
+JEQ     = 0b01010101
+JNE     = 0b01010110
+
 
 class CPU:
     """Main CPU class."""
@@ -23,8 +24,10 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.inst_set_pc = False
         self.SP = 7
-        self.fl = 0b00000000
+        self.FL = 0b010
+       
         
     def __str__(self):
         return f"RAM: {self.ram}, REGISTER: {self.reg}, PC: {self.pc}"
@@ -48,7 +51,7 @@ class CPU:
                 for line in program:
                     num = line.split("#", 1)[0]
                     
-                    if num.strip() == '':  # ignores comment-only lines
+                    if num.strip() == '': 
                         continue
                     self.ram[address] = int(num, 2)
                     address += 1
@@ -57,56 +60,10 @@ class CPU:
             print(f"{sys.argv[0]}: {sys.argv[1]} not found")
             sys.exit(2)
             
-    def alu(self, op, operand_a, operand_b):
+    def alu(self, op, reg_a, reg_b):
         """ALU operations."""
         if op == "ADD":
-            self.reg[operand_a] += self.reg[operand_b]
-        elif op == "CMP":
-            print(f"CMP operand_A:{self.reg[operand_a]}; operand_b:{self.reg[operand_b]} ")
-            # If value of register A = register B...
-            if self.reg[operand_a] == self.reg[operand_b]:
-                current_fl = self.fl
-                E_mask = 0b00000001
-            
-                # if current_fl masked with '&' of 'E_mask' does not have 'E' flag set to '1', then...
-                if (current_fl & E_mask != 0b00000001):
-                    # ...use bitwise XOR to get new_fl
-                    new_fl = self.fl ^ 0b00000001
-                    # set self.fl to value of new_fl
-                    self.fl = new_fl
-                # if current_fl masked with '&' of 'E_mask' DOES have 'E' flag set to '1', then...
-                else:
-                    pass
-            # If value of register A < register B...
-            elif self.reg[operand_a] < self.reg[operand_b]:
-                current_fl = self.fl
-                L_mask = 0b00000100
-                
-                # if current_fl masked with '&' of 'L_mask' does not have 'L' flag set to '1', then...
-                if (current_fl & L_mask != 0b00000100):
-                    # ...use bitwise XOR to get new_fl
-                    new_fl = self.fl ^ 0b00000100
-                    # set self.fl to value of new_fl
-                    self.fl = new_fl
-                # if current_fl masked with '&' of 'L_mask' DOES have 'L' flag set to '1', then...
-                else:
-                    pass
-            # If value of register A > register B...
-            elif self.reg[operand_a] > self.reg[operand_b]:
-                current_fl = self.fl
-                G_mask = 0b00000010
-                
-                # if current_fl masked with '&' does not have 'G' flag set to '1', then...
-                if (current_fl & G_mask != 0b00000010):
-                    # ...use bitwise XOR to get new_fl
-                    new_fl = self.fl ^ 0b00000010
-                    # set self.fl to value of new_fl
-                    self.fl = new_fl
-                # if current_fl masked with '&' of 'G_mask' DOES have 'G' flag set to '1', then...
-                else:
-                    pass
-
-        #elif op == "SUB": etc
+            self.reg[reg_a] += self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
           
@@ -117,20 +74,16 @@ class CPU:
         """
         print(f"TRACE: %02X | %02X %02X %02X |" % (
             self.pc,
-            self.fl,
-            #self.ie,
             self.ram_read(self.pc),
             self.ram_read(self.pc + 1),
             self.ram_read(self.pc + 2)
         ), end='')
         for i in range(8):
-            print(" %02X" % self.reg[i], end='')
-            
+            print(" %02X" % self.reg[i], end='')        
     def run(self):
-        """Run the CPU."""
+        """Run the CPU."""   
         # determines whether or not this function is "running"
         running = True
-        
         # SP pointing at 244 in RAM
         self.reg[self.SP] = 244
       
@@ -141,36 +94,25 @@ class CPU:
             command = self.ram[self.pc]
             
             num_of_ops = int((IR >> 6) & 0b11) + 1
+            self.inst_set_pc = ((IR >> 4) & 0b1) == 1  
             
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
                 
             if command == LDI:
-                print("LDI's test address:", self.ram_read(self.pc + 2))
-                if operand_b == 0b00010011:
-                    self.reg[operand_a] = 21 #test 1 actual address
-                elif operand_b == 0b00100000:
-                    self.reg[operand_a] = 35 #test 2 actual address
-                elif operand_b == 0b00110000:
-                    self.reg[operand_a] = 52 #test 1 actual address
-                elif operand_b == 0b00111101:
-                    self.reg[operand_a] = 66 #test 1 actual address
-                elif operand_b == 0b01001001:
-                    self.reg[operand_a] = 79 #test 1 actual address
-                    
-                else:
-
-                    self.reg[operand_a] = operand_b
+                
+                self.reg[operand_a] = operand_b
                 print("LDI Register 0: ", self.reg[0])
                 print("LDI Register 1: ", self.reg[1])
                 print("LDI Register 2: ", self.reg[2], "\n")
-            elif command == PRN:
-                print('PRN:', self.reg[operand_a])
+
+            elif command == PRN: 
+                print("PRN: ", self.reg[operand_a])
                
             elif command == HLT: 
                 running = False
-                
-            #  Handled by the ALU
+
+            #  Handled by the ALU    
             elif command == MUL:
                 self.reg[operand_a] = self.reg[operand_a] * self.reg[operand_b]
                 
@@ -184,8 +126,8 @@ class CPU:
                 value = self.ram[self.reg[self.SP]]
                 regnum = self.ram[self.pc + 1]
                 self.reg[regnum] = value
-                self.reg[self.SP] += 1 
-                
+                self.reg[self.SP] += 1
+
             elif command == CALL:
                 # Get address of instruction right after this CALL inst
                 return_addr = self.pc + 2
@@ -199,24 +141,24 @@ class CPU:
                     # regnum = self.ram[self.pc + 1] 
                     # subroutine_addr = self.reg[regnum] 
                     # self.pc = subroutine_addr
-                
             elif command == RET:
-                # pop the return address off the stack
+            # pop the return address off the stack
                 return_addr = self.ram[self.reg[self.SP]]
                 self.reg[self.SP] += 1
-                
+            
                 self.pc = return_addr - 1
             
             #  Handled by the ALU  
             elif command == ADD:
-                self.alu('ADD',operand_a,operand_b )
-                
-                
-            #  Handled by the ALU
+                self.reg[operand_a] = self.reg[operand_a] + self.reg[operand_b]
+             #  Handled by the ALU
             elif command == CMP:
-                self.alu('CMP',operand_a,operand_b )
-
-            # sets the PC to the address stored in given register
+                if self.reg[operand_a] == self.reg[operand_b]:
+                    self.FL = 0b001
+                elif self.reg[operand_a] < self.reg[operand_b]:
+                    self.FL = 0b100
+                elif self.reg[operand_a] > self.reg[operand_b]:
+                    self.FL = 0b010
             elif command == JMP:
                 # print("JMP")
                 if self.reg[operand_a] == 19:
@@ -229,66 +171,21 @@ class CPU:
                     self.pc += 5
                 elif self.reg[operand_a] == 73:
                     self.pc += 6
-                    
                 # self.pc = self.ram[self.reg[operand_a]]
-                
+
             elif command == JEQ:
-                current_fl = self.fl
-                E_mask = 0b00000001
-                    
-                # if current_fl masked with '&' of 'E_mask' DOES have 'E' flag set to '1', then...
-                if (current_fl & E_mask == 0b00000001):
-                    # ...set PC equal to address stored in the given register
-                    if self.reg[operand_a] == 19:
-                        self.pc += 2
-                    elif self.reg[operand_a] == 32:
-                        self.pc += 3
-                    elif self.reg[operand_a] == 48:
-                        self.pc += 4
-                    elif self.reg[operand_a] == 61:
-                        self.pc += 5
-                    elif self.reg[operand_a] == 73:
-                        self.pc += 6
-                    # self.pc = self.ram[self.reg[operand_a]]
-                # if current_fl masked with '&' of 'E_mask' does NOT have 'E' flag set to '1', then...
+                if self.FL == 0b001:
+                    self.pc = self.reg[operand_a]
                 else:
-                    pass
-                   
+                    self.inst_set_pc = False
+                 # self.pc = self.ram[self.reg[operand_a]]
+                # if current_fl masked with '&' does NOT have 'E' flag set to '1', then...
             elif command == JNE:
-                current_fl = self.fl
-                E_mask = 0b00000001
-                    
-                # if current_fl masked with '&' of 'E_mask' DOES have 'E' flag set to '0', then...
-                if (current_fl & E_mask == 0b00000000):
-                    # ...set PC equal to address stored in the given register
-                    if self.reg[operand_a] == 19:
-                        self.pc += 2
-                    elif self.reg[operand_a] == 32:
-                        self.pc += 3
-                    elif self.reg[operand_a] == 48:
-                        self.pc += 4
-                    elif self.reg[operand_a] == 61:
-                        self.pc += 5
-                    elif self.reg[operand_a] == 73:
-                        self.pc += 6
-                    # self.pc = self.ram[self.reg[operand_a]]
-                # if current_fl masked with '&' of 'E_mask' does NOT have 'E' flag set to '1', then...
+                if self.FL != 0b001:
+                    self.pc = self.reg[operand_a]
                 else:
-                    pass
-                
+                    self.inst_set_pc = False 
             else: 
-                print(f"unknown instruction: {command}")
                 sys.exit(1)
-                
-            self.pc += num_of_ops
-
-
-            # r0=10
-            # r1=20
-            # r2=0b00010011 (19)
-            # r3=
-
-
-            # fl=100
-
-            # print= 
+            if not self.inst_set_pc:
+                self.pc += num_of_ops
